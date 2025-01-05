@@ -127,6 +127,33 @@ app.get('/admin', isAuthenticated, (req, res) => {
     });
 });
 
+// Thêm hàm helper để lấy domain
+function getDomain(req) {
+    // Nếu có cấu hình DOMAIN trong env, sử dụng nó
+    if (process.env.DOMAIN) {
+        return process.env.DOMAIN;
+    }
+    // Nếu không, sử dụng domain từ request
+    return req.get('host');
+}
+
+// Hàm helper để lấy protocol
+function getProtocol(req) {
+    // Ưu tiên sử dụng protocol từ env config
+    if (process.env.PROTOCOL) {
+        return process.env.PROTOCOL;
+    }
+    // Nếu không có trong env, sử dụng logic cũ
+    return process.env.NODE_ENV === 'production' ? 'https' : req.protocol;
+}
+
+// Hàm tạo full URL
+function getFullUrl(req, path) {
+    const domain = getDomain(req);
+    const protocol = getProtocol(req);
+    return `${protocol}://${domain}${path}`;
+}
+
 app.post('/create-link', isAuthenticated, upload.single('image'), async (req, res) => {
     const { title, alt_text, redirect_url, custom_id } = req.body;
     const db = require('./config/database');
@@ -155,7 +182,7 @@ app.post('/create-link', isAuthenticated, upload.single('image'), async (req, re
             `/uploads/${req.file.filename}` : 
             req.body.image_url;
 
-        const custom_link = `${req.protocol}://${req.get('host')}/i/${id}`;
+        const custom_link = getFullUrl(req, `/i/${id}`);
 
         db.run(`
             INSERT INTO images (id, original_url, title, alt_text, custom_link, redirect_url)
@@ -209,6 +236,22 @@ async function getImageDimensions(imageUrl) {
     }
 }
 
+// Hàm kiểm tra và chuẩn hóa URL
+function normalizeImageUrl(url, req) {
+    try {
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+            return new URL(url).toString();
+        } else if (url.startsWith('/')) {
+            return getFullUrl(req, url);
+        } else {
+            return null;
+        }
+    } catch (error) {
+        console.error('Invalid URL:', error);
+        return null;
+    }
+}
+
 // Cập nhật route /i/:id
 app.get('/i/:id', async (req, res) => {
     const { id } = req.params;
@@ -233,13 +276,19 @@ app.get('/i/:id', async (req, res) => {
 
         // Nếu là crawler, trả về trang với meta tags
         if (isCrawler) {
-            // Đảm bảo URL hình ảnh là absolute URL
-            const fullImageUrl = image.original_url.startsWith('http') 
-                ? image.original_url 
-                : `${req.protocol}://${req.get('host')}${image.original_url}`;
+            // Chuẩn hóa URL hình ảnh
+            const fullImageUrl = normalizeImageUrl(image.original_url, req);
+            
+            if (!fullImageUrl) {
+                console.error('Invalid image URL:', image.original_url);
+                return res.status(400).send('Invalid image URL');
+            }
 
             // Lấy kích thước hình ảnh
             const dimensions = await getImageDimensions(image.original_url);
+
+            // Chuẩn bị URL trang hiện tại
+            const pageUrl = getFullUrl(req, req.originalUrl);
 
             res.send(`
                 <!DOCTYPE html>
@@ -251,7 +300,7 @@ app.get('/i/:id', async (req, res) => {
                     
                     <!-- Open Graph / Facebook -->
                     <meta property="og:type" content="website">
-                    <meta property="og:url" content="${req.protocol}://${req.get('host')}${req.originalUrl}">
+                    <meta property="og:url" content="${pageUrl}">
                     <meta property="og:title" content="${image.title}">
                     <meta property="og:description" content="${image.alt_text}">
                     <meta property="og:image" content="${fullImageUrl}">
@@ -261,7 +310,7 @@ app.get('/i/:id', async (req, res) => {
                     
                     <!-- Twitter -->
                     <meta name="twitter:card" content="summary_large_image">
-                    <meta name="twitter:url" content="${req.protocol}://${req.get('host')}${req.originalUrl}">
+                    <meta name="twitter:url" content="${pageUrl}">
                     <meta name="twitter:title" content="${image.title}">
                     <meta name="twitter:description" content="${image.alt_text}">
                     <meta name="twitter:image" content="${fullImageUrl}">

@@ -1,7 +1,7 @@
 {
-  "name": "smart-image-linker",
+  "name": "truelink-wiki",
   "version": "1.0.0",
-  "description": "Custom image link generator with tracking",
+  "description": "TrueLink.wiki - Custom link generator with tracking",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
