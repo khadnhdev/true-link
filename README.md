@@ -2,11 +2,14 @@
 
 TrueLink.wiki là hệ thống quản lý link hình ảnh thông minh, cho phép tạo các liên kết tùy chỉnh với hình ảnh xem trước cho mạng xã hội. Hệ thống bao gồm tính năng theo dõi phân tích và giao diện quản lý hiện đại.
 
+## Demo Link
+🔗 [Việt Nam vô địch AFF Cup 2025](https://truelink.wiki/i/chien-thang-thai-lan-viet-nam-vo-dich-2025)
+
 ## Tính Năng Chính
 
 ### Quản Lý Link
 - 🖼️ Tạo link hình ảnh tùy chỉnh
-- 🔗 Tùy chỉnh đường dẫn URL
+- 🔗 Tùy chỉnh đường dẫn URL (VD: /i/chien-thang-thai-lan-viet-nam-vo-dich-2025)
 - 📱 Giao diện quản lý trực quan
 - ✏️ Chỉnh sửa và xóa link dễ dàng
 - 📋 Sao chép link nhanh chóng
