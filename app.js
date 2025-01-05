@@ -5,6 +5,9 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { nanoid } = require('nanoid');
+const sharp = require('sharp');
+const https = require('https');
+const http = require('http');
 
 // Khởi tạo các thư mục cần thiết
 const dirs = ['uploads', 'data'];
@@ -175,44 +178,103 @@ app.post('/create-link', isAuthenticated, upload.single('image'), async (req, re
     }
 });
 
-app.get('/i/:id', (req, res) => {
+// Hàm lấy kích thước hình ảnh từ URL
+async function getImageDimensions(imageUrl) {
+    try {
+        let buffer;
+        if (imageUrl.startsWith('http')) {
+            // Nếu là URL từ internet
+            buffer = await new Promise((resolve, reject) => {
+                const protocol = imageUrl.startsWith('https') ? https : http;
+                protocol.get(imageUrl, (response) => {
+                    const chunks = [];
+                    response.on('data', (chunk) => chunks.push(chunk));
+                    response.on('end', () => resolve(Buffer.concat(chunks)));
+                    response.on('error', reject);
+                });
+            });
+        } else {
+            // Nếu là file local
+            buffer = await fs.promises.readFile(path.join(__dirname, imageUrl));
+        }
+
+        const metadata = await sharp(buffer).metadata();
+        return {
+            width: metadata.width,
+            height: metadata.height
+        };
+    } catch (error) {
+        console.error('Error getting image dimensions:', error);
+        return { width: 1200, height: 630 }; // Default dimensions
+    }
+}
+
+// Cập nhật route /i/:id
+app.get('/i/:id', async (req, res) => {
     const { id } = req.params;
     const db = require('./config/database');
     
     // Kiểm tra User-Agent để phát hiện crawler
     const userAgent = req.get('user-agent') || '';
-    const isCrawler = /bot|facebook|twitter|linkedin|whatsapp|telegram|discord/i.test(userAgent);
+    const isCrawler = /bot|facebook|twitter|linkedin|whatsapp|telegram|discord|facebookexternalhit|preview/i.test(userAgent);
     
-    // Get image details
-    db.get('SELECT * FROM images WHERE id = ?', [id], (err, image) => {
-        if (err || !image) {
+    try {
+        // Get image details
+        const image = await new Promise((resolve, reject) => {
+            db.get('SELECT * FROM images WHERE id = ?', [id], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
+        });
+
+        if (!image) {
             return res.status(404).send('Link not found');
         }
 
         // Nếu là crawler, trả về trang với meta tags
         if (isCrawler) {
-            const fullImageUrl = `${req.protocol}://${req.get('host')}${image.original_url}`;
+            // Đảm bảo URL hình ảnh là absolute URL
+            const fullImageUrl = image.original_url.startsWith('http') 
+                ? image.original_url 
+                : `${req.protocol}://${req.get('host')}${image.original_url}`;
+
+            // Lấy kích thước hình ảnh
+            const dimensions = await getImageDimensions(image.original_url);
+
             res.send(`
                 <!DOCTYPE html>
                 <html>
                 <head>
+                    <meta charset="utf-8">
                     <title>${image.title}</title>
                     <meta name="description" content="${image.alt_text}">
                     
                     <!-- Open Graph / Facebook -->
                     <meta property="og:type" content="website">
+                    <meta property="og:url" content="${req.protocol}://${req.get('host')}${req.originalUrl}">
                     <meta property="og:title" content="${image.title}">
                     <meta property="og:description" content="${image.alt_text}">
                     <meta property="og:image" content="${fullImageUrl}">
+                    <meta property="og:image:width" content="${dimensions.width}">
+                    <meta property="og:image:height" content="${dimensions.height}">
+                    <meta property="og:image:alt" content="${image.alt_text}">
                     
                     <!-- Twitter -->
                     <meta name="twitter:card" content="summary_large_image">
+                    <meta name="twitter:url" content="${req.protocol}://${req.get('host')}${req.originalUrl}">
                     <meta name="twitter:title" content="${image.title}">
                     <meta name="twitter:description" content="${image.alt_text}">
                     <meta name="twitter:image" content="${fullImageUrl}">
+                    <meta name="twitter:image:alt" content="${image.alt_text}">
+                    
+                    <!-- Prevent caching for crawlers -->
+                    <meta name="robots" content="noarchive">
+                    <meta http-equiv="cache-control" content="no-cache">
+                    <meta http-equiv="expires" content="0">
+                    <meta http-equiv="pragma" content="no-cache">
                 </head>
                 <body>
-                    <img src="${fullImageUrl}" alt="${image.alt_text}">
+                    <img src="${fullImageUrl}" alt="${image.alt_text}" style="max-width:100%;height:auto;">
                     <h1>${image.title}</h1>
                     <p>${image.alt_text}</p>
                 </body>
@@ -231,7 +293,10 @@ app.get('/i/:id', (req, res) => {
             // Redirect ngay lập tức
             res.redirect(image.redirect_url);
         }
-    });
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).send('Server error');
+    }
 });
 
 app.get('/redirect/:id', (req, res) => {
