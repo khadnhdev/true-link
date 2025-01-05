@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title><%= image.title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+    <meta property="og:title" content="<%= image.title %>">
+    <meta property="og:image" content="<%= image.original_url %>">
+    <meta property="og:description" content="<%= image.alt_text %>">
+</head>
+<body>
+    <div class="preview-container">
+        <h1><%= image.title %></h1>
+        <img src="<%= image.original_url %>" alt="<%= image.alt_text %>">
+        <p><%= image.alt_text %></p>
+        <a href="/redirect/<%= image.id %>" class="redirect-button">Continue to Destination</a>
+    </div>
+    <script>
+        setTimeout(() => {
+            window.location.href = '/redirect/<%= image.id %>';
+        }, 3000);
+    </script>
+</body>
+</html> 

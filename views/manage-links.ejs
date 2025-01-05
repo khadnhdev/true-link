@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Manage Links - Smart Image Linker</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/admin">Smart Image Linker</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin">Create Link</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/manage-links">Manage Links</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/logout">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2>Manage Links</h2>
+                <a href="/admin" class="btn btn-primary">Create New Link</a>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Image</th>
+                                <th>Title</th>
+                                <th>Custom Link</th>
+                                <th>Created</th>
+                                <th>Analytics</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% images.forEach(image => { %>
+                                <tr>
+                                    <td>
+                                        <img src="<%= image.original_url %>" alt="<%= image.alt_text %>" 
+                                             width="50" height="50" class="img-thumbnail">
+                                    </td>
+                                    <td><%= image.title %></td>
+                                    <td>
+                                        <a href="<%= image.custom_link %>" target="_blank">
+                                            <%= image.custom_link %>
+                                        </a>
+                                        <button class="btn btn-sm btn-outline-secondary copy-btn" 
+                                                data-link="<%= image.custom_link %>">
+                                            <i class="bi bi-clipboard"></i>
+                                        </button>
+                                    </td>
+                                    <td><%= new Date(image.created_at).toLocaleString() %></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-info" 
+                                                onclick="showAnalytics('<%= image.id %>')">
+                                            <i class="bi bi-graph-up"></i> Stats
+                                        </button>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <button class="btn btn-sm btn-primary" 
+                                                    onclick="editLink('<%= image.id %>')">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-danger" 
+                                                    onclick="deleteLink('<%= image.id %>')">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Link</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editForm">
+                        <input type="hidden" name="id" id="editId">
+                        <div class="mb-3">
+                            <label class="form-label">Title:</label>
+                            <input type="text" name="title" id="editTitle" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Alt Text:</label>
+                            <input type="text" name="alt_text" id="editAltText" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Redirect URL:</label>
+                            <input type="url" name="redirect_url" id="editRedirectUrl" class="form-control" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="saveEdit()">Save changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics Modal -->
+    <div class="modal fade" id="analyticsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Link Analytics</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="analyticsContent">
+                    Loading...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Copy link to clipboard
+        document.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const link = e.target.closest('.copy-btn').dataset.link;
+                navigator.clipboard.writeText(link);
+                alert('Link copied to clipboard!');
+            });
+        });
+
+        // Delete link
+        function deleteLink(id) {
+            if (confirm('Are you sure you want to delete this link?')) {
+                fetch(`/delete-link/${id}`, { method: 'DELETE' })
+                    .then(response => {
+                        if (response.ok) {
+                            location.reload();
+                        } else {
+                            alert('Error deleting link');
+                        }
+                    });
+            }
+        }
+
+        // Edit link
+        function editLink(id) {
+            fetch(`/get-link/${id}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('editId').value = data.id;
+                    document.getElementById('editTitle').value = data.title;
+                    document.getElementById('editAltText').value = data.alt_text;
+                    document.getElementById('editRedirectUrl').value = data.redirect_url;
+                    new bootstrap.Modal(document.getElementById('editModal')).show();
+                });
+        }
+
+        // Save edit
+        function saveEdit() {
+            const formData = new FormData(document.getElementById('editForm'));
+            fetch('/update-link', {
+                method: 'POST',
+                body: new URLSearchParams(formData)
+            })
+            .then(response => {
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    alert('Error updating link');
+                }
+            });
+        }
+
+        // Show analytics
+        function showAnalytics(id) {
+            const modal = new bootstrap.Modal(document.getElementById('analyticsModal'));
+            modal.show();
+            fetch(`/analytics/${id}`)
+                .then(response => response.json())
+                .then(data => {
+                    const content = document.getElementById('analyticsContent');
+                    content.innerHTML = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Total Clicks: ${data.totalClicks}</h6>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Last 7 Days: ${data.last7Days}</h6>
+                            </div>
+                        </div>
+                        <hr>
+                        <h6>Top Referrers:</h6>
+                        <ul>
+                            ${data.topReferrers.map(r => `
+                                <li>${r.referrer}: ${r.count} clicks</li>
+                            `).join('')}
+                        </ul>
+                    `;
+                });
+        }
+    </script>
+</body>
+</html> 

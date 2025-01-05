@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin - Smart Image Linker</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/admin">Smart Image Linker</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin">Create Link</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/manage-links">Manage Links</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/logout">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="card">
+            <div class="card-header">
+                <h2>Create Custom Image Link</h2>
+            </div>
+            <div class="card-body">
+                <form id="createLinkForm" action="/create-link" method="POST" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label">Upload Image or Enter URL:</label>
+                        <input type="file" name="image" class="form-control mb-2">
+                        <p class="text-center">OR</p>
+                        <input type="url" name="image_url" placeholder="Enter image URL" class="form-control">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Title:</label>
+                        <input type="text" name="title" required class="form-control">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Alt Text:</label>
+                        <input type="text" name="alt_text" required class="form-control">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Custom Hyperlink ID:</label>
+                        <input type="text" name="custom_id" 
+                               pattern="[a-zA-Z0-9-_]+" 
+                               placeholder="e.g., my-custom-link" 
+                               title="Only letters, numbers, hyphens and underscores allowed"
+                               class="form-control">
+                        <small class="text-muted">Leave empty for auto-generated link</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Redirect URL:</label>
+                        <input type="url" name="redirect_url" required class="form-control">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Create Link</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal fade" id="successModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Link Created Successfully!</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>Your link has been created:</strong></p>
+                    <div class="input-group mb-3">
+                        <input type="text" id="createdLink" class="form-control" readonly>
+                        <button class="btn btn-outline-secondary" type="button" onclick="copyLink()">
+                            Copy
+                        </button>
+                    </div>
+                    <div id="copySuccess" class="alert alert-success d-none">
+                        Link copied to clipboard!
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a href="/manage-links" class="btn btn-secondary">View All Links</a>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Create Another</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('createLinkForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            fetch('/create-link', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Hiển thị modal với link
+                    document.getElementById('createdLink').value = data.link;
+                    new bootstrap.Modal(document.getElementById('successModal')).show();
+                    // Reset form
+                    e.target.reset();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error creating link. Please try again.');
+            });
+        });
+
+        function copyLink() {
+            const linkInput = document.getElementById('createdLink');
+            linkInput.select();
+            document.execCommand('copy');
+            
+            // Hiển thị thông báo copy thành công
+            const copySuccess = document.getElementById('copySuccess');
+            copySuccess.classList.remove('d-none');
+            setTimeout(() => {
+                copySuccess.classList.add('d-none');
+            }, 2000);
+        }
+    </script>
+</body>
+</html> 

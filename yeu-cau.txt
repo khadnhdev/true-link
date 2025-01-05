@@ -1,0 +1,32 @@
+Tính năng chính:
+Tùy chỉnh title và hyperlink của hình ảnh:
+
+Người dùng tải lên hình ảnh hoặc cung cấp URL hình ảnh.
+Nhập tiêu đề (title) tùy chỉnh, mô tả (alt text), và hyperlink (URL đích).
+Ứng dụng tạo một bản sao của hình ảnh kèm các thông tin tùy chỉnh.
+Tạo liên kết ngắn (Short URL):
+
+Ứng dụng tự động tạo liên kết rút gọn dẫn đến phiên bản tùy chỉnh.
+Khi người dùng click vào liên kết, họ sẽ được redirect đến link gốc (hoặc URL tùy chỉnh).
+Preview trước khi share:
+
+Hiển thị bản xem trước (preview) của hình ảnh tùy chỉnh, bao gồm tiêu đề, URL, và các thuộc tính meta.
+Tracking và Analytics:
+
+Theo dõi số lượng click, lượt xem, và nguồn gốc truy cập (referrer) để phân tích hiệu suất.
+Chuyển hướng (Redirect):
+
+Sau khi người dùng click vào hyperlink tùy chỉnh, ứng dụng sẽ redirect về liên kết đích một cách nhanh chóng.
+Quy trình hoạt động:
+Người dùng tải lên hình ảnh hoặc nhập URL gốc.
+Nhập thông tin tùy chỉnh:
+Tiêu đề (title).
+Alt text (mô tả hình ảnh).
+Hyperlink (URL bạn muốn người dùng thấy trước khi chuyển hướng).
+Ứng dụng tạo liên kết tùy chỉnh (custom link):
+Ví dụ: https://smartimagelinker.com/abc123.
+Khi người dùng click vào hình ảnh hoặc liên kết:
+Họ sẽ được chuyển hướng qua một màn hình trung gian (hoặc trực tiếp) đến URL gốc.
+
+admin phải đăng nhập vào để tạo link.
+chỉ có 1 tài khoản admin duoc luu trong .env
